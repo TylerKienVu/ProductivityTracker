@@ -44,6 +44,8 @@ import java.awt.event.ActionEvent;
 //deleting tasks
 //switching from incomplete to complete and vice versa
 //progress bar based on amount of tasks complete and incomplete
+//junit tests
+//saving current complete and incomplete for the day
 
 @SuppressWarnings("serial")
 public class PT_GUI extends JFrame {
