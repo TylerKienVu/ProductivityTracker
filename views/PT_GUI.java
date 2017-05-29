@@ -18,7 +18,7 @@ import javax.swing.JButton;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 
-import common.Task;
+import common.*;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JScrollPane;
@@ -30,10 +30,14 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -42,8 +46,6 @@ import java.awt.event.ActionEvent;
 //check if current day is different from saved day
 //calculate streak
 //deleting tasks
-//switching from incomplete to complete and vice versa
-//progress bar based on amount of tasks complete and incomplete
 //junit tests
 //saving current complete and incomplete for the day
 
@@ -51,11 +53,9 @@ import java.awt.event.ActionEvent;
 public class PT_GUI extends JFrame {
 
 	private JPanel contentPane;
-	@SuppressWarnings("rawtypes")
-	private JList lstIncompleteTasks;
+	private JList<Task> lstIncompleteTasks;
 	private JTextField txtTaskName;
-	@SuppressWarnings("rawtypes")
-	private JList lstCompleteTasks;
+	private JList<Task> lstCompleteTasks;
 	private JProgressBar progressBar;
 	private JTextArea txtaTaskDescription;
 	private JCheckBox chckbxMonday;
@@ -71,8 +71,10 @@ public class PT_GUI extends JFrame {
 	
 	//Componenet Data Management
 	////////////////////////////////
-	DefaultListModel<Task> incompleteTaskList = new DefaultListModel<Task>();
-	DefaultListModel<Task> completeTaskList = new DefaultListModel<Task>();
+	private DefaultListModel<Task> incompleteTaskList = new DefaultListModel<Task>();
+	private DefaultListModel<Task> completeTaskList = new DefaultListModel<Task>();
+	private int taskCount;
+	private int currentStreak;
 	///////////////////////////////
 
 	/**
@@ -95,9 +97,28 @@ public class PT_GUI extends JFrame {
 	 * Create the frame.
 	 */
 	public PT_GUI() {
+		File f = new File("src/resources/data/date.ser");
+		//if date of last access exists, check if next day and init saved data
+		if(f.exists() && !f.isDirectory()) { 
+			if(isNewDay()){
+				System.out.println("It is a new day!");
+				//new day so reset tasks to incomplete
+				cacheDate();
+			}
+			else{
+				System.out.println("It isn't a new day..");
+				//load saved tasks from previous session
+				cacheDate();
+			}
+		}
+		//first time opening application
+		else{
+			System.out.println("First time opening app");
+			cacheDate();
+		}
+		
 		initComponents();
 		createEvents();
-		
 	}
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void initComponents(){
@@ -139,6 +160,7 @@ public class PT_GUI extends JFrame {
 		tp_Menu.addTab("Productivity", new ImageIcon(PT_GUI.class.getResource("/resources/graphic-progression.png")), pnl_Productivity, "Check your productivity");
 
 		progressBar = new JProgressBar();
+		progressBar.setForeground(new Color(50, 205, 50));
 		progressBar.setFocusable(false);
 		
 		JLabel lblIncompleteTasks = new JLabel("Incomplete Tasks");
@@ -166,7 +188,7 @@ public class PT_GUI extends JFrame {
 		lblCurrentStreak.setFont(new Font("Rockwell", Font.PLAIN, 16));
 		GroupLayout gl_pnl_Productivity = new GroupLayout(pnl_Productivity);
 		gl_pnl_Productivity.setHorizontalGroup(
-			gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+			gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
 				.addGroup(gl_pnl_Productivity.createSequentialGroup()
 					.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
 						.addGroup(gl_pnl_Productivity.createSequentialGroup()
@@ -180,10 +202,7 @@ public class PT_GUI extends JFrame {
 									.addPreferredGap(ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
 									.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
 										.addComponent(lblCompleteTasks)
-										.addComponent(spCompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE)))
-								.addGroup(gl_pnl_Productivity.createSequentialGroup()
-									.addGap(121)
-									.addComponent(button, GroupLayout.PREFERRED_SIZE, 100, GroupLayout.PREFERRED_SIZE))))
+										.addComponent(spCompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE)))))
 						.addGroup(gl_pnl_Productivity.createSequentialGroup()
 							.addGap(89)
 							.addComponent(lblProductivityForThe))
@@ -191,6 +210,10 @@ public class PT_GUI extends JFrame {
 							.addGap(115)
 							.addComponent(lblCurrentStreak)))
 					.addContainerGap())
+				.addGroup(gl_pnl_Productivity.createSequentialGroup()
+					.addContainerGap(137, Short.MAX_VALUE)
+					.addComponent(button, GroupLayout.PREFERRED_SIZE, 100, GroupLayout.PREFERRED_SIZE)
+					.addGap(130))
 		);
 		gl_pnl_Productivity.setVerticalGroup(
 			gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
@@ -209,9 +232,9 @@ public class PT_GUI extends JFrame {
 					.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
 						.addComponent(spCompleteTasks, GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
 						.addComponent(spIncompleteTasks, GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-					.addGap(34)
+					.addGap(18)
 					.addComponent(button, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE)
-					.addGap(91))
+					.addGap(107))
 		);
 		
 
@@ -345,6 +368,29 @@ public class PT_GUI extends JFrame {
 	}
 	
 	private void createEvents(){
+		//Pressing switch button
+		button.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				List<Task> switchIncomplete = lstIncompleteTasks.getSelectedValuesList();
+				List<Task> switchComplete = lstCompleteTasks.getSelectedValuesList();
+				if(switchIncomplete.size() != 0){
+					for(int i = 0; i < switchIncomplete.size();i++){
+						completeTaskList.addElement(switchIncomplete.get(i));
+						incompleteTaskList.removeElement(switchIncomplete.get(i));
+					}
+				}
+				else if(switchComplete.size() != 0){
+					for(int i = 0; i < switchComplete.size();i++){
+						incompleteTaskList.addElement(switchComplete.get(i));
+						completeTaskList.removeElement(switchComplete.get(i));
+					}
+				}
+				else{
+					JOptionPane.showMessageDialog(null, "You must make a selection");
+				}
+				calculateProgress();
+			}
+		});
 		
 		//Selecting Incomplete list
 		lstIncompleteTasks.addMouseListener(new MouseAdapter() {
@@ -419,7 +465,7 @@ public class PT_GUI extends JFrame {
 		chckbxSaturday.setSelected(false);
 		chckbxSunday.setSelected(false);
 	}
-	
+	//this method should only be called if new day or no save data exists
 	private void initTaskList(){
 		FileReader input = null;
 		BufferedReader bufRead = null;
@@ -429,6 +475,7 @@ public class PT_GUI extends JFrame {
 			String myLine = null;
 			while ( (myLine = bufRead.readLine()) != null)
 			{    
+				taskCount++;
 				String[] splitLine = myLine.split(":");
 				
 				String[] stringFrequencies = splitLine[2].replace("[","").replace("]","").replace(" ","").split(",");
@@ -457,5 +504,31 @@ public class PT_GUI extends JFrame {
 				e.printStackTrace();
 			}
 		}
+	}
+	private void calculateProgress(){
+		double completeSize = (double) completeTaskList.getSize();
+		double calc = (completeSize/taskCount)* 100;
+		progressBar.setValue((int) calc);
+	}
+	private void cacheDate(){
+		WriteObject obj = new WriteObject();
+		DateSerial date = new DateSerial();
+		obj.serializeDateSerial(date);
+	}
+	private Boolean isNewDay(){
+		ReadObject obj = new ReadObject();
+		DateSerial date = obj.deserialzeDateSerial("src/resources/data/date.ser");
+		return compareDay(date);
+	}
+	//if it is the same day, returns false
+	private Boolean compareDay(DateSerial cachedDate){
+		Calendar cal1 = Calendar.getInstance();
+		Calendar cal2 = Calendar.getInstance();
+		Date currentDate = new Date();
+		cal1.setTime(cachedDate.getSaveDate());
+		cal2.setTime(currentDate);
+		boolean sameDay = cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+		                  cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
+		return !sameDay;
 	}
 }
