@@ -30,10 +30,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -43,11 +45,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 //todo:
-//check if current day is different from saved day
 //calculate streak
 //deleting tasks
 //junit tests
-//saving current complete and incomplete for the day
 
 @SuppressWarnings("serial")
 public class PT_GUI extends JFrame {
@@ -69,6 +69,7 @@ public class PT_GUI extends JFrame {
 	private JButton button;
 	private JLabel lblCurrentStreak;
 	
+	////////////////////////////////
 	//Componenet Data Management
 	////////////////////////////////
 	private DefaultListModel<Task> incompleteTaskList = new DefaultListModel<Task>();
@@ -97,26 +98,25 @@ public class PT_GUI extends JFrame {
 	 * Create the frame.
 	 */
 	public PT_GUI() {
-		File f = new File("src/resources/data/date.ser");
+		Path p = Paths.get("src/resources/data/date.ser");
 		//if date of last access exists, check if next day and init saved data
-		if(f.exists() && !f.isDirectory()) { 
+		if(Files.exists(p)) { 
 			if(isNewDay()){
 				System.out.println("It is a new day!");
+				initTaskList();
 				//new day so reset tasks to incomplete
-				cacheDate();
 			}
 			else{
 				System.out.println("It isn't a new day..");
+				loadTasks();
 				//load saved tasks from previous session
-				cacheDate();
 			}
 		}
 		//first time opening application
 		else{
 			System.out.println("First time opening app");
-			cacheDate();
 		}
-		
+		cacheDate();
 		initComponents();
 		createEvents();
 	}
@@ -136,7 +136,6 @@ public class PT_GUI extends JFrame {
 		lstCompleteTasks.setModel(completeTaskList);
 		lstIncompleteTasks = new JList();
 		lstIncompleteTasks.setModel(incompleteTaskList);
-		initTaskList();
 		
 		///////////////////////////////////////
 		/////// Window Builder Layout Code
@@ -162,6 +161,7 @@ public class PT_GUI extends JFrame {
 		progressBar = new JProgressBar();
 		progressBar.setForeground(new Color(50, 205, 50));
 		progressBar.setFocusable(false);
+		calculateProgress();
 		
 		JLabel lblIncompleteTasks = new JLabel("Incomplete Tasks");
 		lblIncompleteTasks.setFont(new Font("Rockwell", Font.PLAIN, 16));
@@ -371,15 +371,18 @@ public class PT_GUI extends JFrame {
 		//Pressing switch button
 		button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				Boolean switched = false;
 				List<Task> switchIncomplete = lstIncompleteTasks.getSelectedValuesList();
 				List<Task> switchComplete = lstCompleteTasks.getSelectedValuesList();
 				if(switchIncomplete.size() != 0){
+					switched = true;
 					for(int i = 0; i < switchIncomplete.size();i++){
 						completeTaskList.addElement(switchIncomplete.get(i));
 						incompleteTaskList.removeElement(switchIncomplete.get(i));
 					}
 				}
 				else if(switchComplete.size() != 0){
+					switched = true;
 					for(int i = 0; i < switchComplete.size();i++){
 						incompleteTaskList.addElement(switchComplete.get(i));
 						completeTaskList.removeElement(switchComplete.get(i));
@@ -387,6 +390,9 @@ public class PT_GUI extends JFrame {
 				}
 				else{
 					JOptionPane.showMessageDialog(null, "You must make a selection");
+				}
+				if(switched){
+					cacheTasks();
 				}
 				calculateProgress();
 			}
@@ -418,7 +424,7 @@ public class PT_GUI extends JFrame {
 				FileWriter output = null;
 				BufferedWriter bufWrite = null;
 				try {
-					output = new FileWriter("src/resources/tasks",true);
+					output = new FileWriter("src/resources/data/tasks",true);
 					bufWrite = new BufferedWriter(output);
 					int[] frequency = new int[7];
 					frequency[0] = chckbxMonday.isSelected() ? 1 : 0;
@@ -449,10 +455,16 @@ public class PT_GUI extends JFrame {
 					catch(Exception e){
 						e.printStackTrace();
 					}
+					cacheTasks();
 				}
 				
 			}
 		});
+	}
+	private void calculateProgress(){
+		double completeSize = (double) completeTaskList.getSize();
+		double calc = (completeSize/taskCount)* 100;
+		progressBar.setValue((int) calc);
 	}
 	private void clearCreateTask(){
 		txtTaskName.setText(null);
@@ -465,8 +477,16 @@ public class PT_GUI extends JFrame {
 		chckbxSaturday.setSelected(false);
 		chckbxSunday.setSelected(false);
 	}
-	//this method should only be called if new day or no save data exists
+	private boolean tasksExist(){
+		Path p = Paths.get("src/resources/data/tasks");
+		return Files.exists(p);
+	}
+	//this method should only be called if new day
 	private void initTaskList(){
+		if(!tasksExist()){
+			System.out.println("Tasks do not exist, exiting task init");
+			return;
+		}
 		FileReader input = null;
 		BufferedReader bufRead = null;
 		try{
@@ -503,21 +523,71 @@ public class PT_GUI extends JFrame {
 			catch(Exception e){
 				e.printStackTrace();
 			}
+			cacheTasks();
 		}
 	}
-	private void calculateProgress(){
-		double completeSize = (double) completeTaskList.getSize();
-		double calc = (completeSize/taskCount)* 100;
-		progressBar.setValue((int) calc);
+	
+	/////////////////////////////////
+	// Methods that handle caching of tasks
+	////////////////////////////////
+	
+	private Task[] DLMtoArray(DefaultListModel<Task> list){
+		Task[] result = new Task[list.getSize()];
+		for(int i = 0; i < list.getSize(); i++){
+			result[i] = list.get(i);
+		}
+		return result;
 	}
+	//loads cached tasks if the same day
+	private void loadTasks(){
+		if(!tasksExist()){
+			System.out.println("Tasks do not exist, exiting task load");
+			return;
+		}
+		ReadObject<TaskListSerial> readObj = new ReadObject<TaskListSerial>();
+		TaskListSerial incomp = readObj.deserialzeObject("src/resources/data/incomplete.ser");
+		TaskListSerial comp = readObj.deserialzeObject("src/resources/data/complete.ser");
+		//iterate through each array and add to task lists
+		for(int i = 0; i < incomp.getSaveTaskList().length;i++){
+			incompleteTaskList.addElement(incomp.getSaveTaskList()[i]);
+			taskCount++;
+		}
+		for(int i = 0; i < comp.getSaveTaskList().length;i++){
+			completeTaskList.addElement(comp.getSaveTaskList()[i]);
+			taskCount++;
+		}
+	}
+	//caches both task lists for reuse (use after modification to lists)
+	private void cacheTasks(){
+		//have to convert to array because DLM is not serializable
+		TaskListSerial incompSer = new TaskListSerial(DLMtoArray(incompleteTaskList));
+		TaskListSerial compSer = new TaskListSerial(DLMtoArray(completeTaskList));
+		saveTaskList(incompSer,"src/resources/data/incomplete.ser");
+		saveTaskList(compSer,"src/resources/data/complete.ser");
+	}
+	//saves a task list
+	private void saveTaskList(TaskListSerial saveObj, String file){
+		WriteObject<TaskListSerial> writeObj = new WriteObject<TaskListSerial>();
+		writeObj.serializeObject(saveObj, file);
+	}
+	//////////////////////////////
+	//***************************
+	/////////////////////////////
+	
+	
+
+	
+	///////////////////////////////////////
+	//methods that handle date functionality
+	//////////////////////////////////////
 	private void cacheDate(){
-		WriteObject obj = new WriteObject();
+		WriteObject<DateSerial> writeObj = new WriteObject<DateSerial>();
 		DateSerial date = new DateSerial();
-		obj.serializeDateSerial(date);
+		writeObj.serializeObject(date,"src/resources/data/date.ser");
 	}
 	private Boolean isNewDay(){
-		ReadObject obj = new ReadObject();
-		DateSerial date = obj.deserialzeDateSerial("src/resources/data/date.ser");
+		ReadObject<DateSerial> readObj = new ReadObject<DateSerial>();
+		DateSerial date = readObj.deserialzeObject("src/resources/data/date.ser");
 		return compareDay(date);
 	}
 	//if it is the same day, returns false
@@ -531,4 +601,7 @@ public class PT_GUI extends JFrame {
 		                  cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
 		return !sameDay;
 	}
+	////////////////////////////////////
+	//*********************************
+	///////////////////////////////////
 }

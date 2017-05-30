@@ -1,8 +1,10 @@
 package common;
 
+import java.io.Serializable;
 import java.security.InvalidParameterException;
 
-public class Task {
+public class Task implements Serializable{
+	private static final long serialVersionUID = 9119835871674844610L;
 	private String name;
 	private String description;
 	private int[] frequency;

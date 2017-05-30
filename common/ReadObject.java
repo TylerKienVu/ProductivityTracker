@@ -4,10 +4,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 
-public class ReadObject {
-	public DateSerial deserialzeDateSerial(String filename) {
+public class ReadObject<T> {
+	@SuppressWarnings("unchecked")
+	public T deserialzeObject(String filename) {
 
-		DateSerial date = null;
+		T obj = null;
 
 		FileInputStream fin = null;
 		ObjectInputStream ois = null;
@@ -16,7 +17,7 @@ public class ReadObject {
 
 			fin = new FileInputStream(filename);
 			ois = new ObjectInputStream(fin);
-			date = (DateSerial) ois.readObject();
+			obj = (T) ois.readObject();
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -40,24 +41,25 @@ public class ReadObject {
 
 		}
 
-		return date;
+		return obj;
 
 	}
 
-	public DateSerial deserialzeDateSerialJDK7(String filename) {
+	@SuppressWarnings("unchecked")
+	public T deserialzeObjectJDK7(String filename) {
 
-		DateSerial date = null;
+		T obj = null;
 
 		try (ObjectInputStream ois
 			= new ObjectInputStream(new FileInputStream(filename))) {
 
-			date = (DateSerial) ois.readObject();
+			obj = (T) ois.readObject();
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 
-		return date;
+		return obj;
 
 	}
 

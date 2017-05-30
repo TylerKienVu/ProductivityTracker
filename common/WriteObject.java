@@ -4,19 +4,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
-public class WriteObject {
-	public void serializeDateSerial(DateSerial date) {
+public class WriteObject<T> {
+	public void serializeObject(T obj, String file) {
 
 		FileOutputStream fout = null;
 		ObjectOutputStream oos = null;
 
 		try {
 
-			fout = new FileOutputStream("src/resources/data/date.ser");
+			fout = new FileOutputStream(file);
 			oos = new ObjectOutputStream(fout);
-			oos.writeObject(date);
-
-			System.out.println("Done");
+			oos.writeObject(obj);
 
 		} catch (Exception ex) {
 
@@ -43,13 +41,12 @@ public class WriteObject {
 		}
 	}
 
-	public void serializeDateSerialJDK7(DateSerial date) {
+	public void serializeObjectJDK7(T obj,String file) {
 
 		try (ObjectOutputStream oos =
-				new ObjectOutputStream(new FileOutputStream("src/resources/data/date.ser"))) {
+				new ObjectOutputStream(new FileOutputStream(file))) {
 
-			oos.writeObject(date);
-			System.out.println("Done");
+			oos.writeObject(obj);
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
