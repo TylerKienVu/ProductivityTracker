@@ -45,8 +45,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 //todo:
-//calculate streak
-//deleting tasks
+//deleting tasks 
+//edit tasks
 //junit tests
 
 @SuppressWarnings("serial")
@@ -66,16 +66,20 @@ public class PT_GUI extends JFrame {
 	private JCheckBox chckbxSaturday;
 	private JCheckBox chckbxSunday;
 	private JButton btnAddTask;
-	private JButton button;
+	private JButton btnSwitch;
 	private JLabel lblCurrentStreak;
+	private JScrollPane spInactiveTasks;
+	private JList<Task> lstInactiveTasks;
 	
 	////////////////////////////////
 	//Componenet Data Management
 	////////////////////////////////
 	private DefaultListModel<Task> incompleteTaskList = new DefaultListModel<Task>();
 	private DefaultListModel<Task> completeTaskList = new DefaultListModel<Task>();
+	private DefaultListModel<Task> inactiveTaskList = new DefaultListModel<Task>();
 	private int taskCount;
-	private int currentStreak;
+	private int currentStreak=0;
+
 	///////////////////////////////
 
 	/**
@@ -131,12 +135,6 @@ public class PT_GUI extends JFrame {
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		
-		//Initialize and sync both task lists to GUI
-		lstCompleteTasks = new JList();
-		lstCompleteTasks.setModel(completeTaskList);
-		lstIncompleteTasks = new JList();
-		lstIncompleteTasks.setModel(incompleteTaskList);
-		
 		///////////////////////////////////////
 		/////// Window Builder Layout Code
 		/////////////////////////////////////
@@ -152,107 +150,143 @@ public class PT_GUI extends JFrame {
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
 				.addComponent(tp_Menu, GroupLayout.DEFAULT_SIZE, 243, Short.MAX_VALUE)
 		);
-						
-		JPanel pnl_Productivity = new JPanel();
-		pnl_Productivity.setBorder(null);
-		pnl_Productivity.setFocusable(false);
-		tp_Menu.addTab("Productivity", new ImageIcon(PT_GUI.class.getResource("/resources/graphic-progression.png")), pnl_Productivity, "Check your productivity");
-
 		progressBar = new JProgressBar();
 		progressBar.setForeground(new Color(50, 205, 50));
 		progressBar.setFocusable(false);
 		calculateProgress();
+
 		
-		JLabel lblIncompleteTasks = new JLabel("Incomplete Tasks");
-		lblIncompleteTasks.setFont(new Font("Rockwell", Font.PLAIN, 16));
-		lblIncompleteTasks.setForeground(Color.RED);
-		lblIncompleteTasks.setHorizontalAlignment(SwingConstants.CENTER);
-		lblIncompleteTasks.setFocusable(false);
+		//Initialize and sync both task lists to GUI
+		lstCompleteTasks = new JList();
+		lstCompleteTasks.setModel(completeTaskList);
+		lstIncompleteTasks = new JList();
+		lstIncompleteTasks.setModel(incompleteTaskList);
+		lstInactiveTasks = new JList();
+		lstInactiveTasks.setModel(inactiveTaskList);
 		
-		JScrollPane spIncompleteTasks = new JScrollPane();
 		
-		JLabel lblCompleteTasks = new JLabel("Complete Tasks");
-		lblCompleteTasks.setFont(new Font("Rockwell", Font.PLAIN, 16));
-		lblCompleteTasks.setForeground(new Color(50, 205, 50));
 		
-		JScrollPane spCompleteTasks = new JScrollPane();
+		lstInactiveTasks.setFont(new Font("Tahoma", Font.BOLD, 13));
+		lstInactiveTasks.setFocusable(false);
+		JPanel pnl_Productivity = new JPanel();
+		pnl_Productivity.setBorder(null);
+		pnl_Productivity.setFocusable(false);
+		tp_Menu.addTab("Productivity", new ImageIcon(PT_GUI.class.getResource("/resources/graphic-progression.png")), pnl_Productivity, "Check your productivity");
 		
-		button = new JButton("");
-		button.setFocusable(false);
-		button.setIcon(new ImageIcon(PT_GUI.class.getResource("/resources/switch.png")));
-		
-		JLabel lblProductivityForThe = new JLabel("Productivity for the Day");
-		lblProductivityForThe.setFont(new Font("Rockwell", Font.PLAIN, 17));
-		
-		lblCurrentStreak = new JLabel("Current Streak: 0");
-		lblCurrentStreak.setFont(new Font("Rockwell", Font.PLAIN, 16));
-		GroupLayout gl_pnl_Productivity = new GroupLayout(pnl_Productivity);
-		gl_pnl_Productivity.setHorizontalGroup(
-			gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
-				.addGroup(gl_pnl_Productivity.createSequentialGroup()
-					.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+
+				
+				JLabel lblIncompleteTasks = new JLabel("Incomplete Tasks");
+				lblIncompleteTasks.setFont(new Font("Rockwell", Font.PLAIN, 16));
+				lblIncompleteTasks.setForeground(Color.RED);
+				lblIncompleteTasks.setHorizontalAlignment(SwingConstants.CENTER);
+				lblIncompleteTasks.setFocusable(false);
+				
+				JScrollPane spIncompleteTasks = new JScrollPane();
+				
+				JLabel lblCompleteTasks = new JLabel("Complete Tasks");
+				lblCompleteTasks.setFont(new Font("Rockwell", Font.PLAIN, 16));
+				lblCompleteTasks.setForeground(new Color(50, 205, 50));
+				
+				JScrollPane spCompleteTasks = new JScrollPane();
+				
+				btnSwitch = new JButton("");
+				btnSwitch.setFocusable(false);
+				btnSwitch.setIcon(new ImageIcon(PT_GUI.class.getResource("/resources/switch.png")));
+				
+				JLabel lblProductivityForThe = new JLabel("Productivity for the Day");
+				lblProductivityForThe.setFont(new Font("Rockwell", Font.PLAIN, 17));
+				
+				lblCurrentStreak = new JLabel("Current Streak: " + currentStreak);
+				lblCurrentStreak.setFont(new Font("Rockwell", Font.PLAIN, 16));
+				
+				JLabel lblInactive = new JLabel("Inactive Tasks");
+				lblInactive.setFont(new Font("Rockwell", Font.PLAIN, 16));
+				
+				spInactiveTasks = new JScrollPane();
+				GroupLayout gl_pnl_Productivity = new GroupLayout(pnl_Productivity);
+				gl_pnl_Productivity.setHorizontalGroup(
+					gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
+						.addGroup(gl_pnl_Productivity.createSequentialGroup()
+							.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+								.addGroup(gl_pnl_Productivity.createSequentialGroup()
+									.addContainerGap()
+									.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
+										.addComponent(progressBar, GroupLayout.DEFAULT_SIZE, 343, Short.MAX_VALUE)
+										.addGroup(gl_pnl_Productivity.createSequentialGroup()
+											.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+												.addComponent(spIncompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE)
+												.addGroup(gl_pnl_Productivity.createSequentialGroup()
+													.addGap(16)
+													.addComponent(lblIncompleteTasks)))
+											.addPreferredGap(ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
+											.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
+												.addComponent(spCompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE)
+												.addGroup(gl_pnl_Productivity.createSequentialGroup()
+													.addComponent(lblCompleteTasks)
+													.addGap(25))))))
+								.addGroup(gl_pnl_Productivity.createSequentialGroup()
+									.addGap(89)
+									.addComponent(lblProductivityForThe))
+								.addGroup(gl_pnl_Productivity.createSequentialGroup()
+									.addGap(115)
+									.addComponent(lblCurrentStreak))
+								.addGroup(gl_pnl_Productivity.createSequentialGroup()
+									.addGap(133)
+									.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+										.addComponent(lblInactive, GroupLayout.PREFERRED_SIZE, 103, GroupLayout.PREFERRED_SIZE)
+										.addComponent(btnSwitch, GroupLayout.PREFERRED_SIZE, 100, GroupLayout.PREFERRED_SIZE))
+									.addGap(119)))
+							.addContainerGap())
+						.addGroup(gl_pnl_Productivity.createSequentialGroup()
+							.addContainerGap(65, Short.MAX_VALUE)
+							.addComponent(spInactiveTasks, GroupLayout.PREFERRED_SIZE, 239, GroupLayout.PREFERRED_SIZE)
+							.addGap(63))
+				);
+				gl_pnl_Productivity.setVerticalGroup(
+					gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
 						.addGroup(gl_pnl_Productivity.createSequentialGroup()
 							.addContainerGap()
-							.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.TRAILING)
-								.addComponent(progressBar, GroupLayout.DEFAULT_SIZE, 343, Short.MAX_VALUE)
-								.addGroup(gl_pnl_Productivity.createSequentialGroup()
-									.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
-										.addComponent(lblIncompleteTasks)
-										.addComponent(spIncompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE))
-									.addPreferredGap(ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
-									.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
-										.addComponent(lblCompleteTasks)
-										.addComponent(spCompleteTasks, GroupLayout.PREFERRED_SIZE, 160, GroupLayout.PREFERRED_SIZE)))))
-						.addGroup(gl_pnl_Productivity.createSequentialGroup()
-							.addGap(89)
-							.addComponent(lblProductivityForThe))
-						.addGroup(gl_pnl_Productivity.createSequentialGroup()
-							.addGap(115)
-							.addComponent(lblCurrentStreak)))
-					.addContainerGap())
-				.addGroup(gl_pnl_Productivity.createSequentialGroup()
-					.addContainerGap(137, Short.MAX_VALUE)
-					.addComponent(button, GroupLayout.PREFERRED_SIZE, 100, GroupLayout.PREFERRED_SIZE)
-					.addGap(130))
-		);
-		gl_pnl_Productivity.setVerticalGroup(
-			gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_pnl_Productivity.createSequentialGroup()
-					.addContainerGap()
-					.addComponent(lblProductivityForThe)
-					.addGap(18)
-					.addComponent(lblCurrentStreak)
-					.addGap(29)
-					.addComponent(progressBar, GroupLayout.PREFERRED_SIZE, 38, GroupLayout.PREFERRED_SIZE)
-					.addGap(18)
-					.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.BASELINE)
-						.addComponent(lblIncompleteTasks)
-						.addComponent(lblCompleteTasks))
-					.addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
-						.addComponent(spCompleteTasks, GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-						.addComponent(spIncompleteTasks, GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-					.addGap(18)
-					.addComponent(button, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE)
-					.addGap(107))
-		);
-		
+							.addComponent(lblProductivityForThe)
+							.addGap(18)
+							.addComponent(lblCurrentStreak)
+							.addGap(29)
+							.addComponent(progressBar, GroupLayout.PREFERRED_SIZE, 38, GroupLayout.PREFERRED_SIZE)
+							.addGap(18)
+							.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.BASELINE)
+								.addComponent(lblCompleteTasks)
+								.addComponent(lblIncompleteTasks))
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addGroup(gl_pnl_Productivity.createParallelGroup(Alignment.LEADING)
+								.addComponent(spCompleteTasks, GroupLayout.DEFAULT_SIZE, 158, Short.MAX_VALUE)
+								.addComponent(spIncompleteTasks, GroupLayout.DEFAULT_SIZE, 158, Short.MAX_VALUE))
+							.addPreferredGap(ComponentPlacement.UNRELATED)
+							.addComponent(btnSwitch, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(lblInactive)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(spInactiveTasks, GroupLayout.PREFERRED_SIZE, 82, GroupLayout.PREFERRED_SIZE)
+							.addContainerGap())
+				);
+				
+				lstInactiveTasks.setSelectionBackground(Color.LIGHT_GRAY);
+				spInactiveTasks.setViewportView(lstInactiveTasks);
+				
 
-		
-		
-		lstCompleteTasks.setFont(new Font("Tahoma", Font.PLAIN, 13));
-		lstCompleteTasks.setFocusable(false);
+				
+				
+				lstCompleteTasks.setFont(new Font("Tahoma", Font.BOLD, 13));
+				lstCompleteTasks.setFocusable(false);
+				
+						lstCompleteTasks.setSelectionBackground(new Color(153, 255, 153));
+						spCompleteTasks.setViewportView(lstCompleteTasks);
+						
 
-		lstCompleteTasks.setSelectionBackground(new Color(50, 205, 50));
-		spCompleteTasks.setViewportView(lstCompleteTasks);
-		
-
-		
-		lstIncompleteTasks.setFont(new Font("Tahoma", Font.PLAIN, 13));
-		lstIncompleteTasks.setSelectionBackground(Color.RED);
-		spIncompleteTasks.setViewportView(lstIncompleteTasks);
-		lstIncompleteTasks.setFocusable(false);
-		pnl_Productivity.setLayout(gl_pnl_Productivity);
+						
+						lstIncompleteTasks.setFont(new Font("Tahoma", Font.BOLD, 13));
+						lstIncompleteTasks.setSelectionBackground(new Color(255, 153, 153));
+						spIncompleteTasks.setViewportView(lstIncompleteTasks);
+						lstIncompleteTasks.setFocusable(false);
+						pnl_Productivity.setLayout(gl_pnl_Productivity);
 
 		JPanel pnl_AddTask = new JPanel();
 		pnl_AddTask.setBorder(null);
@@ -369,7 +403,7 @@ public class PT_GUI extends JFrame {
 	
 	private void createEvents(){
 		//Pressing switch button
-		button.addActionListener(new ActionListener() {
+		btnSwitch.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				Boolean switched = false;
 				List<Task> switchIncomplete = lstIncompleteTasks.getSelectedValuesList();
@@ -403,6 +437,7 @@ public class PT_GUI extends JFrame {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				lstCompleteTasks.clearSelection();
+				lstInactiveTasks.clearSelection();
 			}
 		});
 		
@@ -411,6 +446,15 @@ public class PT_GUI extends JFrame {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				lstIncompleteTasks.clearSelection();
+				lstInactiveTasks.clearSelection();
+			}
+		});
+		//Selecting Inactive List
+		lstInactiveTasks.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent arg0) {
+				lstIncompleteTasks.clearSelection();
+				lstCompleteTasks.clearSelection();
 			}
 		});
 		
@@ -427,18 +471,25 @@ public class PT_GUI extends JFrame {
 					output = new FileWriter("src/resources/data/tasks",true);
 					bufWrite = new BufferedWriter(output);
 					int[] frequency = new int[7];
-					frequency[0] = chckbxMonday.isSelected() ? 1 : 0;
-					frequency[1] = chckbxTuesday.isSelected() ? 1 : 0;
-					frequency[2] = chckbxWednesday.isSelected() ? 1 : 0;
-					frequency[3] = chckbxThursday.isSelected() ? 1 : 0;
-					frequency[4] = chckbxFriday.isSelected() ? 1 : 0;
-					frequency[5] = chckbxSaturday.isSelected() ? 1 : 0;
-					frequency[6] = chckbxSunday.isSelected() ? 1 : 0;
+					
+					frequency[0] = chckbxSunday.isSelected() ? 1 : 0;
+					frequency[1] = chckbxMonday.isSelected() ? 1 : 0;
+					frequency[2] = chckbxTuesday.isSelected() ? 1 : 0;
+					frequency[3] = chckbxWednesday.isSelected() ? 1 : 0;
+					frequency[4] = chckbxThursday.isSelected() ? 1 : 0;
+					frequency[5] = chckbxFriday.isSelected() ? 1 : 0;
+					frequency[6] = chckbxSaturday.isSelected() ? 1 : 0;
 					
 
 					String toWrite = txtTaskName.getText() + ":" + txtaTaskDescription.getText() + ":" + Arrays.toString(frequency) + "\n";
 					bufWrite.write(toWrite);
-					incompleteTaskList.addElement(new Task(txtTaskName.getText(),txtaTaskDescription.getText(),frequency));
+					if(frequency[getDayOfWeek()-1] == 1){
+						incompleteTaskList.addElement(new Task(txtTaskName.getText(),txtaTaskDescription.getText(),frequency));
+						taskCount++;
+					}
+					else{
+						inactiveTaskList.addElement(new Task(txtTaskName.getText(),txtaTaskDescription.getText(),frequency));
+					}
 					clearCreateTask();
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -490,12 +541,11 @@ public class PT_GUI extends JFrame {
 		FileReader input = null;
 		BufferedReader bufRead = null;
 		try{
-			input = new FileReader("src/resources/tasks");
+			input = new FileReader("src/resources/data/tasks");
 			bufRead = new BufferedReader(input);
 			String myLine = null;
 			while ( (myLine = bufRead.readLine()) != null)
 			{    
-				taskCount++;
 				String[] splitLine = myLine.split(":");
 				
 				String[] stringFrequencies = splitLine[2].replace("[","").replace("]","").replace(" ","").split(",");
@@ -505,7 +555,13 @@ public class PT_GUI extends JFrame {
 					frequency[i] = Integer.parseInt(stringFrequencies[i]);
 				}
 				
-				incompleteTaskList.addElement(new Task(splitLine[0],splitLine[1],frequency));
+				if(frequency[getDayOfWeek()-1] == 1){
+					incompleteTaskList.addElement(new Task(splitLine[0],splitLine[1],frequency));
+					taskCount++;
+				}
+				else{
+					inactiveTaskList.addElement(new Task(splitLine[0],splitLine[1],frequency));
+				}
 			}
 		}
 		catch(Exception e){
@@ -525,6 +581,13 @@ public class PT_GUI extends JFrame {
 			}
 			cacheTasks();
 		}
+	}
+	//returns 1-7, sunday-saturday
+	private int getDayOfWeek(){
+		Date currentDate = new Date();
+		Calendar c = Calendar.getInstance();
+		c.setTime(currentDate);
+		return c.get(Calendar.DAY_OF_WEEK);
 	}
 	
 	/////////////////////////////////
@@ -547,6 +610,7 @@ public class PT_GUI extends JFrame {
 		ReadObject<TaskListSerial> readObj = new ReadObject<TaskListSerial>();
 		TaskListSerial incomp = readObj.deserialzeObject("src/resources/data/incomplete.ser");
 		TaskListSerial comp = readObj.deserialzeObject("src/resources/data/complete.ser");
+		TaskListSerial inactive = readObj.deserialzeObject("src/resources/data/inactive.ser");
 		//iterate through each array and add to task lists
 		for(int i = 0; i < incomp.getSaveTaskList().length;i++){
 			incompleteTaskList.addElement(incomp.getSaveTaskList()[i]);
@@ -556,12 +620,17 @@ public class PT_GUI extends JFrame {
 			completeTaskList.addElement(comp.getSaveTaskList()[i]);
 			taskCount++;
 		}
+		for(int i = 0; i < inactive.getSaveTaskList().length;i++){
+			inactiveTaskList.addElement(inactive.getSaveTaskList()[i]);
+		}
 	}
 	//caches both task lists for reuse (use after modification to lists)
 	private void cacheTasks(){
 		//have to convert to array because DLM is not serializable
 		TaskListSerial incompSer = new TaskListSerial(DLMtoArray(incompleteTaskList));
 		TaskListSerial compSer = new TaskListSerial(DLMtoArray(completeTaskList));
+		TaskListSerial inactiveSer = new TaskListSerial(DLMtoArray(inactiveTaskList));
+		saveTaskList(inactiveSer,"src/resources/data/inactive.ser");
 		saveTaskList(incompSer,"src/resources/data/incomplete.ser");
 		saveTaskList(compSer,"src/resources/data/complete.ser");
 	}
@@ -582,13 +651,20 @@ public class PT_GUI extends JFrame {
 	//////////////////////////////////////
 	private void cacheDate(){
 		WriteObject<DateSerial> writeObj = new WriteObject<DateSerial>();
-		DateSerial date = new DateSerial();
+		DateSerial date = new DateSerial(currentStreak);
 		writeObj.serializeObject(date,"src/resources/data/date.ser");
 	}
 	private Boolean isNewDay(){
 		ReadObject<DateSerial> readObj = new ReadObject<DateSerial>();
 		DateSerial date = readObj.deserialzeObject("src/resources/data/date.ser");
-		return compareDay(date);
+		Boolean newDay = compareDay(date);
+		if(newDay){
+			currentStreak = date.getCurrentStreak() + 1;
+		}
+		else{
+			currentStreak = date.getCurrentStreak();
+		}
+		return newDay;
 	}
 	//if it is the same day, returns false
 	private Boolean compareDay(DateSerial cachedDate){
@@ -601,7 +677,4 @@ public class PT_GUI extends JFrame {
 		                  cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
 		return !sameDay;
 	}
-	////////////////////////////////////
-	//*********************************
-	///////////////////////////////////
 }

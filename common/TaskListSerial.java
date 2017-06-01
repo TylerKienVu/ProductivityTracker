@@ -2,7 +2,6 @@ package common;
 
 import java.io.Serializable;
 
-import javax.swing.DefaultListModel;
 
 
 public class TaskListSerial implements Serializable{
